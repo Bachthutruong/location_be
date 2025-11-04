@@ -6,6 +6,9 @@ import Location, { LocationStatus } from '../models/Location.js';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth.js';
 import { UserRole } from '../models/User.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js';
+import Category from '../models/Category.js';
+// @ts-ignore - types provided at runtime, and declared in src/types
+import * as XLSX from 'xlsx';
 
 const router = express.Router();
 
@@ -99,6 +102,121 @@ router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), asyn
     }
   } catch (error: any) {
     res.status(500).json({ message: error.message });
+  }
+});
+
+// Download Excel template for bulk import (Admin only)
+router.get('/import/template', authenticate, authorize(UserRole.ADMIN), async (_req: AuthRequest, res: Response) => {
+  const rows = [
+    ['name','categoryName','province','district','street','address','phone','googleMapsLink','description','imageUrls','latitude','longitude'],
+    ['Sample Location','Restaurant','Taipei City','Da’an District','Section 1, Xinyi Rd','No. 1, Section 1, Xinyi Rd, Da’an District, Taipei City','02-12345678','https://maps.google.com/?q=25.033964,121.564468','Great place for local food','https://picsum.photos/seed/1/800/600;https://picsum.photos/seed/2/800/600','25.033964','121.564468']
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Template');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', 'attachment; filename="locations_template.xlsx"');
+  res.send(Buffer.from(buf));
+});
+
+// Bulk import locations via Excel (Admin only)
+router.post('/import', authenticate, authorize(UserRole.ADMIN), (upload.single('file') as unknown as RequestHandler), async (req: AuthRequest, res: Response) => {
+  try {
+    const file = req.file as Express.Multer.File | undefined;
+    if (!file) {
+      return res.status(400).json({ message: 'Excel 檔案為必填' });
+    }
+    // parse workbook
+    const wb = XLSX.read(file.buffer, { type: 'buffer' });
+    const sheetName = wb.SheetNames[0];
+    if (!sheetName) {
+      return res.status(400).json({ message: 'Excel 內容為空' });
+    }
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false }) as unknown as string[][];
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ message: 'Excel 內容為空' });
+    }
+    const header = rows[0].map(h => String(h || '').trim());
+    const requiredHeaders = ['name','categoryName','province','district','street','address','googleMapsLink','description'];
+    for (const h of requiredHeaders) {
+      if (!header.includes(h)) {
+        return res.status(400).json({ message: `缺少欄位: ${h}` });
+      }
+    }
+
+    const colIndex = (name: string) => header.indexOf(name);
+    const dataRows = rows.slice(1);
+
+    const errors: { row: number; message: string }[] = [];
+    let success = 0;
+
+    for (let r = 0; r < dataRows.length; r++) {
+      const row = dataRows[r];
+      const get = (name: string) => (colIndex(name) >= 0 && row[colIndex(name)] !== undefined ? row[colIndex(name)].trim() : '');
+
+      const name = get('name');
+      const categoryName = get('categoryName');
+      const province = get('province');
+      const district = get('district');
+      const street = get('street');
+      const address = get('address');
+      const phone = get('phone');
+      const googleMapsLink = get('googleMapsLink');
+      const description = get('description');
+      const imageUrlsRaw = get('imageUrls');
+      const latitudeRaw = get('latitude');
+      const longitudeRaw = get('longitude');
+
+      // basic validation
+      if (!name || !categoryName || !province || !district || !street || !address || !googleMapsLink || !description) {
+        errors.push({ row: r + 2, message: '缺少必要欄位' });
+        continue;
+      }
+      try { new URL(googleMapsLink); } catch { errors.push({ row: r + 2, message: 'Google 地圖連結無效' }); continue; }
+
+      // find category by name
+      let category = await Category.findOne({ name: categoryName.trim() });
+      if (!category) {
+        category = await Category.create({ name: categoryName.trim() });
+      }
+
+      const images = imageUrlsRaw ? imageUrlsRaw.split(';').map(s => s.trim()).filter(Boolean) : [];
+
+      const latitude = latitudeRaw ? parseFloat(latitudeRaw) : undefined;
+      const longitude = longitudeRaw ? parseFloat(longitudeRaw) : undefined;
+
+      const location = new Location({
+        name,
+        category: category._id,
+        province,
+        district,
+        street,
+        address,
+        phone: phone || undefined,
+        googleMapsLink,
+        description,
+        images,
+        manager: req.user!.id,
+        status: LocationStatus.APPROVED, // admin import -> approved
+        approvedBy: req.user!.id as any,
+        approvedAt: new Date(),
+        latitude,
+        longitude
+      });
+
+      try {
+        await location.save();
+        success++;
+      } catch (e: any) {
+        errors.push({ row: r + 2, message: e.message || '無法儲存' });
+      }
+    }
+
+    res.json({ imported: success, failed: errors.length, errors });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message || '匯入失敗' });
   }
 });
 

@@ -76,10 +76,10 @@ const LocationSchema = new Schema<ILocation>(
       required: true,
       trim: true
     },
-    images: [{
-      type: String,
-      required: true
-    }],
+    images: {
+      type: [String],
+      default: []
+    },
     manager: {
       type: Schema.Types.ObjectId,
       ref: 'User',
