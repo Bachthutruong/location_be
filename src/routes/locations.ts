@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Response, RequestHandler } from 'express';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import { body, validationResult } from 'express-validator';
@@ -200,7 +200,7 @@ router.post(
   '/',
   authenticate,
   authorize(UserRole.MANAGER, UserRole.ADMIN),
-  upload.array('images', 10),
+  (upload.array('images', 10) as unknown as RequestHandler),
   async (req: AuthRequest, res: Response) => {
     try {
       // Manual validation for multipart/form-data
@@ -294,7 +294,7 @@ router.post(
 router.put(
   '/:id',
   authenticate,
-  upload.array('images', 10),
+  (upload.array('images', 10) as unknown as RequestHandler),
   async (req: AuthRequest, res: Response) => {
     try {
       const location = await Location.findById(req.params.id);
