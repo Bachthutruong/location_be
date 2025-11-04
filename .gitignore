@@ -1,5 +1,4 @@
-# Dependencies
-node_modules/
+# Dependencies (node_modules is intentionally committed)
 .pnp
 .pnp.js
 
