@@ -22,14 +22,26 @@ const upload = multer({
 // Get all approved locations (public)
 router.get('/', async (req, res) => {
   try {
-    const { category, province, district, search } = req.query;
+    const { category, categories, province, district, search } = req.query;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
     const query: any = { status: LocationStatus.APPROVED };
 
-    if (category) {
+    // Support both single category (for backward compatibility) and multiple categories
+    if (categories) {
+      // Handle comma-separated string or array
+      const categoryArray = Array.isArray(categories) 
+        ? categories 
+        : (categories as string).split(',').map(c => c.trim()).filter(Boolean);
+      
+      if (categoryArray.length > 0) {
+        query.category = { $in: categoryArray };
+      }
+    } else if (category) {
+      // Backward compatibility: single category
       query.category = category;
     }
+    
     if (province) {
       query.province = province;
     }
