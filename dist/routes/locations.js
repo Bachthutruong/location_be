@@ -18,7 +18,7 @@ const upload = multer({
 // Get all approved locations (public)
 router.get('/', async (req, res) => {
     try {
-        const { category, categories, province, district, search } = req.query;
+        const { category, categories, province, district, search, featured } = req.query;
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
         const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
         const query = { status: LocationStatus.APPROVED };
@@ -48,6 +48,9 @@ router.get('/', async (req, res) => {
                 { description: { $regex: search, $options: 'i' } }
             ];
         }
+        if (typeof featured !== 'undefined') {
+            query.featured = ['true', '1', 'yes'].includes(String(featured).toLowerCase());
+        }
         const baseCursor = Location.find(query)
             .populate('category', 'name')
             .populate('manager', 'name email')
@@ -71,7 +74,7 @@ router.get('/', async (req, res) => {
 // Get all locations (Admin/Staff only - includes pending, deleted)
 router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), async (req, res) => {
     try {
-        const { status, search } = req.query;
+        const { status, search, featured } = req.query;
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
         const offset = req.query.offset ? parseInt(req.query.offset, 10) : 0;
         const query = {};
@@ -86,6 +89,9 @@ router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), asyn
                 { province: { $regex: search, $options: 'i' } },
                 { district: { $regex: search, $options: 'i' } }
             ];
+        }
+        if (typeof featured !== 'undefined') {
+            query.featured = ['true', '1', 'yes'].includes(String(featured).toLowerCase());
         }
         const baseCursor = Location.find(query)
             .populate('category', 'name')
@@ -481,6 +487,24 @@ router.patch('/:id/approve', authenticate, authorize(UserRole.STAFF, UserRole.AD
     }
     catch (error) {
         res.status(500).json({ message: error.message });
+    }
+});
+// Set featured flag (Admin only)
+router.patch('/:id/featured', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+    try {
+        const location = await Location.findById(req.params.id);
+        if (!location) {
+            return res.status(404).json({ message: 'Location not found' });
+        }
+        const desired = ['true', '1', 'yes'].includes(String(req.body?.featured).toLowerCase());
+        location.featured = desired;
+        await location.save();
+        await location.populate('category', 'name');
+        await location.populate('manager', 'name email');
+        res.json(location);
+    }
+    catch (error) {
+        res.status(500).json({ message: error.message || '更新精選地點失敗' });
     }
 });
 // Reject location (Staff and Admin)

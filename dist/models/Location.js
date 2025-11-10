@@ -84,6 +84,11 @@ const LocationSchema = new Schema({
     },
     longitude: {
         type: Number
+    },
+    featured: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 }, {
     timestamps: true

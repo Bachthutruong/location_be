@@ -22,7 +22,7 @@ const upload = multer({
 // Get all approved locations (public)
 router.get('/', async (req, res) => {
   try {
-    const { category, categories, province, district, search } = req.query;
+    const { category, categories, province, district, search, featured } = req.query;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
     const query: any = { status: LocationStatus.APPROVED };
@@ -54,6 +54,9 @@ router.get('/', async (req, res) => {
         { description: { $regex: search, $options: 'i' } }
       ];
     }
+    if (typeof featured !== 'undefined') {
+      query.featured = ['true', '1', 'yes'].includes(String(featured).toLowerCase());
+    }
 
     const baseCursor = Location.find(query)
       .populate('category', 'name')
@@ -78,7 +81,7 @@ router.get('/', async (req, res) => {
 // Get all locations (Admin/Staff only - includes pending, deleted)
 router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), async (req: AuthRequest, res: Response) => {
   try {
-    const { status, search } = req.query as any;
+    const { status, search, featured } = req.query as any;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
     const query: any = {};
@@ -94,6 +97,9 @@ router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), asyn
         { province: { $regex: search, $options: 'i' } },
         { district: { $regex: search, $options: 'i' } }
       ];
+    }
+    if (typeof featured !== 'undefined') {
+      query.featured = ['true', '1', 'yes'].includes(String(featured).toLowerCase());
     }
     const baseCursor = Location.find(query)
       .populate('category', 'name')
@@ -522,6 +528,29 @@ router.patch(
       res.json(location);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// Set featured flag (Admin only)
+router.patch(
+  '/:id/featured',
+  authenticate,
+  authorize(UserRole.ADMIN),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const location = await Location.findById(req.params.id);
+      if (!location) {
+        return res.status(404).json({ message: 'Location not found' });
+      }
+      const desired = ['true', '1', 'yes'].includes(String((req.body as any)?.featured).toLowerCase());
+      (location as any).featured = desired;
+      await location.save();
+      await location.populate('category', 'name');
+      await location.populate('manager', 'name email');
+      res.json(location);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message || '更新精選地點失敗' });
     }
   }
 );

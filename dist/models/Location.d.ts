@@ -24,6 +24,7 @@ export interface ILocation extends Document {
     deletedAt?: Date;
     latitude?: number;
     longitude?: number;
+    featured?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

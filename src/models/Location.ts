@@ -26,6 +26,7 @@ export interface ILocation extends Document {
   deletedAt?: Date;
   latitude?: number;
   longitude?: number;
+  featured?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -109,6 +110,11 @@ const LocationSchema = new Schema<ILocation>(
     },
     longitude: {
       type: Number
+    },
+    featured: {
+      type: Boolean,
+      default: false,
+      index: true
     }
   },
   {
