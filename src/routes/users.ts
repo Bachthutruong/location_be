@@ -6,8 +6,8 @@ import { authenticate, authorize, AuthRequest } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all users (Admin only)
-router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res) => {
+// Get all users (Admin/Staff/Manager only)
+router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req: AuthRequest, res) => {
   try {
     const { role } = req.query;
     const query: any = {};
@@ -23,8 +23,8 @@ router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest
   }
 });
 
-// Get single user (Admin only)
-router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res) => {
+// Get single user (Admin/Staff/Manager only)
+router.get('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req: AuthRequest, res) => {
   try {
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
@@ -36,11 +36,11 @@ router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequ
   }
 });
 
-// Create user (Admin only)
+// Create user (Admin/Staff/Manager only)
 router.post(
   '/',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
@@ -84,11 +84,11 @@ router.post(
   }
 );
 
-// Update user (Admin only)
+// Update user (Admin/Staff/Manager only)
 router.put(
   '/:id',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   [
     body('email').optional().isEmail().normalizeEmail(),
     body('name').optional().trim().notEmpty(),
@@ -170,11 +170,11 @@ router.patch(
   }
 );
 
-// Delete user (Admin only)
+// Delete user (Admin/Staff/Manager only)
 router.delete(
   '/:id',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res) => {
     try {
       const user = await User.findById(req.params.id);

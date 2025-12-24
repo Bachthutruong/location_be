@@ -2,16 +2,45 @@ import express, { Response } from 'express';
 import mongoose from 'mongoose';
 import { body, validationResult } from 'express-validator';
 import Category from '../models/Category.js';
+import Location, { LocationStatus } from '../models/Location.js';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth.js';
 import { UserRole } from '../models/User.js';
 
 const router = express.Router();
 
-// Get all categories
+// Get all categories with location counts (filtered by province/district if provided)
 router.get('/', async (req, res) => {
   try {
+    const { province, district } = req.query;
     const categories = await Category.find().sort({ createdAt: -1 });
-    res.json(categories);
+    
+    // Build base query for filtering locations
+    const locationQuery: any = {
+      status: LocationStatus.APPROVED
+    };
+    
+    if (province) {
+      locationQuery.province = province;
+    }
+    if (district) {
+      locationQuery.district = district;
+    }
+    
+    // Get location counts for each category (filtered by province/district if provided)
+    const categoriesWithCounts = await Promise.all(
+      categories.map(async (category) => {
+        const count = await Location.countDocuments({
+          ...locationQuery,
+          category: category._id
+        });
+        return {
+          ...category.toObject(),
+          locationCount: count
+        };
+      })
+    );
+    
+    res.json(categoriesWithCounts);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -30,11 +59,11 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create category (Admin only)
+// Create category (Admin/Staff/Manager only)
 router.post(
   '/',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   [
     body('name').trim().notEmpty(),
     body('description').optional().trim()
@@ -63,11 +92,11 @@ router.post(
   }
 );
 
-// Update category (Admin only)
+// Update category (Admin/Staff/Manager only)
 router.put(
   '/:id',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   [
     body('name').optional().trim().notEmpty(),
     body('description').optional().trim()
@@ -111,11 +140,11 @@ router.put(
   }
 );
 
-// Delete category (Admin only)
+// Delete category (Admin/Staff/Manager only)
 router.delete(
   '/:id',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res) => {
     try {
       const category = await Category.findById(req.params.id);

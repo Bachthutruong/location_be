@@ -2,6 +2,7 @@ import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface ISettings extends Document {
   defaultProvince?: string;
+  defaultDistrict?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -13,6 +14,10 @@ interface ISettingsModel extends Model<ISettings> {
 const SettingsSchema = new Schema<ISettings>(
   {
     defaultProvince: {
+      type: String,
+      trim: true
+    },
+    defaultDistrict: {
       type: String,
       trim: true
     }

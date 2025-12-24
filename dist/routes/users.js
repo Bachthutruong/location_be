@@ -4,8 +4,8 @@ import { body, validationResult } from 'express-validator';
 import User, { UserRole } from '../models/User.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 const router = express.Router();
-// Get all users (Admin only)
-router.get('/', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Get all users (Admin/Staff/Manager only)
+router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const { role } = req.query;
         const query = {};
@@ -19,8 +19,8 @@ router.get('/', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-// Get single user (Admin only)
-router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Get single user (Admin/Staff/Manager only)
+router.get('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const user = await User.findById(req.params.id).select('-password');
         if (!user) {
@@ -32,8 +32,8 @@ router.get('/:id', authenticate, authorize(UserRole.ADMIN), async (req, res) => 
         res.status(500).json({ message: error.message });
     }
 });
-// Create user (Admin only)
-router.post('/', authenticate, authorize(UserRole.ADMIN), [
+// Create user (Admin/Staff/Manager only)
+router.post('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), [
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
     body('name').trim().notEmpty(),
@@ -68,8 +68,8 @@ router.post('/', authenticate, authorize(UserRole.ADMIN), [
         res.status(500).json({ message: error.message });
     }
 });
-// Update user (Admin only)
-router.put('/:id', authenticate, authorize(UserRole.ADMIN), [
+// Update user (Admin/Staff/Manager only)
+router.put('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), [
     body('email').optional().isEmail().normalizeEmail(),
     body('name').optional().trim().notEmpty(),
     body('role').optional().isIn(Object.values(UserRole))
@@ -133,8 +133,8 @@ router.patch('/:id/reset-password', authenticate, authorize(UserRole.STAFF, User
         res.status(500).json({ message: error.message });
     }
 });
-// Delete user (Admin only)
-router.delete('/:id', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Delete user (Admin/Staff/Manager only)
+router.delete('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
         if (!user) {

@@ -78,8 +78,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get all locations (Admin/Staff only - includes pending, deleted)
-router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), async (req: AuthRequest, res: Response) => {
+// Get all locations (Admin/Staff/Manager - includes pending, deleted)
+router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req: AuthRequest, res: Response) => {
   try {
     const { status, search, featured } = req.query as any;
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
@@ -123,8 +123,8 @@ router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), asyn
   }
 });
 
-// Download Excel template for bulk import (Admin only)
-router.get('/import/template', authenticate, authorize(UserRole.ADMIN), async (_req: AuthRequest, res: Response) => {
+// Download Excel template for bulk import (Admin/Staff/Manager only)
+router.get('/import/template', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (_req: AuthRequest, res: Response) => {
   const rows = [
     ['name','categoryName','province','district','street','address','phone','googleMapsLink','description','imageUrls','latitude','longitude'],
     ['Sample Location','Restaurant','Taipei City','Da’an District','Section 1, Xinyi Rd','No. 1, Section 1, Xinyi Rd, Da’an District, Taipei City','02-12345678','https://maps.google.com/?q=25.033964,121.564468','Great place for local food','https://picsum.photos/seed/1/800/600;https://picsum.photos/seed/2/800/600','25.033964','121.564468']
@@ -138,8 +138,8 @@ router.get('/import/template', authenticate, authorize(UserRole.ADMIN), async (_
   res.send(Buffer.from(buf));
 });
 
-// Bulk import locations via Excel (Admin only)
-router.post('/import', authenticate, authorize(UserRole.ADMIN), (upload.single('file') as unknown as RequestHandler), async (req: AuthRequest, res: Response) => {
+// Bulk import locations via Excel (Admin/Staff/Manager only)
+router.post('/import', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), (upload.single('file') as unknown as RequestHandler), async (req: AuthRequest, res: Response) => {
   try {
     const file = req.file as Express.Multer.File | undefined;
     if (!file) {
@@ -238,8 +238,8 @@ router.post('/import', authenticate, authorize(UserRole.ADMIN), (upload.single('
   }
 });
 
-// Get deleted locations (Admin only)
-router.get('/deleted', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res: Response) => {
+// Get deleted locations (Admin/Staff/Manager only)
+router.get('/deleted', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req: AuthRequest, res: Response) => {
   try {
     const locations = await Location.find({ status: LocationStatus.DELETED })
       .populate('category', 'name')
@@ -317,8 +317,8 @@ router.get('/manager/:id', authenticate, authorize(UserRole.MANAGER), async (req
   }
 });
 
-// Get any single location for Admin/Staff (view even if not approved)
-router.get('/admin/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), async (req: AuthRequest, res: Response) => {
+// Get any single location for Admin/Staff/Manager (view even if not approved)
+router.get('/admin/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req: AuthRequest, res: Response) => {
   try {
     const location = await Location.findById(req.params.id)
       .populate('category', 'name description')
@@ -536,7 +536,7 @@ router.patch(
 router.patch(
   '/:id/featured',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res: Response) => {
     try {
       const location = await Location.findById(req.params.id);

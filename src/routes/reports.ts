@@ -7,8 +7,8 @@ import { UserRole } from '../models/User.js';
 
 const router = express.Router();
 
-// Get all reports (Admin only)
-router.get('/', authenticate, authorize(UserRole.ADMIN), async (req: AuthRequest, res) => {
+// Get all reports (Admin/Staff/Manager only)
+router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req: AuthRequest, res) => {
   try {
     const { status } = req.query;
     const query: any = {};
@@ -40,11 +40,11 @@ router.get('/categories', async (req, res) => {
   }
 });
 
-// Create report category (Admin only)
+// Create report category (Admin/Staff/Manager only)
 router.post(
   '/categories',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   [
     body('name').trim().notEmpty(),
     body('description').optional().trim()
@@ -73,11 +73,11 @@ router.post(
   }
 );
 
-// Update report category (Admin only)
+// Update report category (Admin/Staff/Manager only)
 router.put(
   '/categories/:id',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   [
     body('name').optional().trim().notEmpty(),
     body('description').optional().trim()
@@ -117,11 +117,11 @@ router.put(
   }
 );
 
-// Delete report category (Admin only)
+// Delete report category (Admin/Staff/Manager only)
 router.delete(
   '/categories/:id',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res) => {
     try {
       const category = await ReportCategory.findById(req.params.id);
@@ -174,11 +174,11 @@ router.post(
   }
 );
 
-// Resolve report (Admin only)
+// Resolve report (Admin/Staff/Manager only)
 router.patch(
   '/:id/resolve',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res) => {
     try {
       const report = await Report.findById(req.params.id);
@@ -202,11 +202,11 @@ router.patch(
   }
 );
 
-// Reject report (Admin only)
+// Reject report (Admin/Staff/Manager only)
 router.patch(
   '/:id/reject',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res) => {
     try {
       const report = await Report.findById(req.params.id);

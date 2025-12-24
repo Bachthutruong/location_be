@@ -1,6 +1,7 @@
 import { Document, Model } from 'mongoose';
 export interface ISettings extends Document {
     defaultProvince?: string;
+    defaultDistrict?: string;
     createdAt: Date;
     updatedAt: Date;
 }

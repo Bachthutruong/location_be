@@ -71,8 +71,8 @@ router.get('/', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-// Get all locations (Admin/Staff only - includes pending, deleted)
-router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), async (req, res) => {
+// Get all locations (Admin/Staff/Manager - includes pending, deleted)
+router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const { status, search, featured } = req.query;
         const limit = req.query.limit ? parseInt(req.query.limit, 10) : undefined;
@@ -115,8 +115,8 @@ router.get('/all', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), asyn
         res.status(500).json({ message: error.message });
     }
 });
-// Download Excel template for bulk import (Admin only)
-router.get('/import/template', authenticate, authorize(UserRole.ADMIN), async (_req, res) => {
+// Download Excel template for bulk import (Admin/Staff/Manager only)
+router.get('/import/template', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (_req, res) => {
     const rows = [
         ['name', 'categoryName', 'province', 'district', 'street', 'address', 'phone', 'googleMapsLink', 'description', 'imageUrls', 'latitude', 'longitude'],
         ['Sample Location', 'Restaurant', 'Taipei City', 'Da’an District', 'Section 1, Xinyi Rd', 'No. 1, Section 1, Xinyi Rd, Da’an District, Taipei City', '02-12345678', 'https://maps.google.com/?q=25.033964,121.564468', 'Great place for local food', 'https://picsum.photos/seed/1/800/600;https://picsum.photos/seed/2/800/600', '25.033964', '121.564468']
@@ -129,8 +129,8 @@ router.get('/import/template', authenticate, authorize(UserRole.ADMIN), async (_
     res.setHeader('Content-Disposition', 'attachment; filename="locations_template.xlsx"');
     res.send(Buffer.from(buf));
 });
-// Bulk import locations via Excel (Admin only)
-router.post('/import', authenticate, authorize(UserRole.ADMIN), upload.single('file'), async (req, res) => {
+// Bulk import locations via Excel (Admin/Staff/Manager only)
+router.post('/import', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), upload.single('file'), async (req, res) => {
     try {
         const file = req.file;
         if (!file) {
@@ -225,8 +225,8 @@ router.post('/import', authenticate, authorize(UserRole.ADMIN), upload.single('f
         res.status(500).json({ message: error.message || '匯入失敗' });
     }
 });
-// Get deleted locations (Admin only)
-router.get('/deleted', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Get deleted locations (Admin/Staff/Manager only)
+router.get('/deleted', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const locations = await Location.find({ status: LocationStatus.DELETED })
             .populate('category', 'name')
@@ -298,8 +298,8 @@ router.get('/manager/:id', authenticate, authorize(UserRole.MANAGER), async (req
         res.status(500).json({ message: error.message });
     }
 });
-// Get any single location for Admin/Staff (view even if not approved)
-router.get('/admin/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF), async (req, res) => {
+// Get any single location for Admin/Staff/Manager (view even if not approved)
+router.get('/admin/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const location = await Location.findById(req.params.id)
             .populate('category', 'name description')
@@ -490,7 +490,7 @@ router.patch('/:id/approve', authenticate, authorize(UserRole.STAFF, UserRole.AD
     }
 });
 // Set featured flag (Admin only)
-router.patch('/:id/featured', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+router.patch('/:id/featured', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const location = await Location.findById(req.params.id);
         if (!location) {

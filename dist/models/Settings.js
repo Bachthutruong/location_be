@@ -3,6 +3,10 @@ const SettingsSchema = new Schema({
     defaultProvince: {
         type: String,
         trim: true
+    },
+    defaultDistrict: {
+        type: String,
+        trim: true
     }
 }, {
     timestamps: true

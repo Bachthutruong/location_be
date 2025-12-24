@@ -13,17 +13,20 @@ router.get('/', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-// Update settings (Admin only)
-router.patch('/', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Update settings (Admin/Staff/Manager only)
+router.patch('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
-        const { defaultProvince } = req.body;
+        const { defaultProvince, defaultDistrict } = req.body;
         let settings = await Settings.findOne();
         if (!settings) {
-            settings = new Settings({ defaultProvince });
+            settings = new Settings({ defaultProvince, defaultDistrict });
         }
         else {
             if (defaultProvince !== undefined) {
                 settings.defaultProvince = defaultProvince || undefined;
+            }
+            if (defaultDistrict !== undefined) {
+                settings.defaultDistrict = defaultDistrict || undefined;
             }
         }
         await settings.save();

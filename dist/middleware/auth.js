@@ -13,6 +13,24 @@ export const authenticate = async (req, res, next) => {
         res.status(401).json({ message: 'Token is not valid' });
     }
 };
+export const optionalAuthenticate = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        if (token) {
+            try {
+                const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+                req.user = decoded;
+            }
+            catch (error) {
+                // Invalid token, continue without user
+            }
+        }
+        next();
+    }
+    catch (error) {
+        next();
+    }
+};
 export const authorize = (...roles) => {
     return (req, res, next) => {
         if (!req.user) {

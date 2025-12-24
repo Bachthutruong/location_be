@@ -5,8 +5,8 @@ import ReportCategory from '../models/ReportCategory.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { UserRole } from '../models/User.js';
 const router = express.Router();
-// Get all reports (Admin only)
-router.get('/', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Get all reports (Admin/Staff/Manager only)
+router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const { status } = req.query;
         const query = {};
@@ -35,8 +35,8 @@ router.get('/categories', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-// Create report category (Admin only)
-router.post('/categories', authenticate, authorize(UserRole.ADMIN), [
+// Create report category (Admin/Staff/Manager only)
+router.post('/categories', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), [
     body('name').trim().notEmpty(),
     body('description').optional().trim()
 ], async (req, res) => {
@@ -58,8 +58,8 @@ router.post('/categories', authenticate, authorize(UserRole.ADMIN), [
         res.status(500).json({ message: error.message });
     }
 });
-// Update report category (Admin only)
-router.put('/categories/:id', authenticate, authorize(UserRole.ADMIN), [
+// Update report category (Admin/Staff/Manager only)
+router.put('/categories/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), [
     body('name').optional().trim().notEmpty(),
     body('description').optional().trim()
 ], async (req, res) => {
@@ -90,8 +90,8 @@ router.put('/categories/:id', authenticate, authorize(UserRole.ADMIN), [
         res.status(500).json({ message: error.message });
     }
 });
-// Delete report category (Admin only)
-router.delete('/categories/:id', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Delete report category (Admin/Staff/Manager only)
+router.delete('/categories/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const category = await ReportCategory.findById(req.params.id);
         if (!category) {
@@ -131,8 +131,8 @@ router.post('/', authenticate, [
         res.status(500).json({ message: error.message });
     }
 });
-// Resolve report (Admin only)
-router.patch('/:id/resolve', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Resolve report (Admin/Staff/Manager only)
+router.patch('/:id/resolve', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const report = await Report.findById(req.params.id);
         if (!report) {
@@ -151,8 +151,8 @@ router.patch('/:id/resolve', authenticate, authorize(UserRole.ADMIN), async (req
         res.status(500).json({ message: error.message });
     }
 });
-// Reject report (Admin only)
-router.patch('/:id/reject', authenticate, authorize(UserRole.ADMIN), async (req, res) => {
+// Reject report (Admin/Staff/Manager only)
+router.patch('/:id/reject', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const report = await Report.findById(req.params.id);
         if (!report) {

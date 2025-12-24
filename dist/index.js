@@ -9,6 +9,10 @@ import reportRoutes from './routes/reports.js';
 import reviewRoutes from './routes/reviews.js';
 import userRoutes from './routes/users.js';
 import settingsRoutes from './routes/settings.js';
+import menuRoutes from './routes/menus.js';
+import userMenuRoutes from './routes/user-menus.js';
+import newsCategoryRoutes from './routes/news-categories.js';
+import newsRoutes from './routes/news.js';
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,6 +37,10 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/menus', menuRoutes);
+app.use('/api/user-menus', userMenuRoutes);
+app.use('/api/news-categories', newsCategoryRoutes);
+app.use('/api/news', newsRoutes);
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Server is running' });

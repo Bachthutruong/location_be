@@ -17,12 +17,13 @@ cloudinary.config({
 });
 
 export const uploadToCloudinary = async (
-  file: Express.Multer.File
+  file: Express.Multer.File,
+  folder: string = 'location-management'
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: 'location-management',
+        folder: folder,
         resource_type: 'image'
       },
       (error, result) => {
@@ -43,8 +44,20 @@ export const uploadToCloudinary = async (
 
 export const deleteFromCloudinary = async (url: string): Promise<void> => {
   try {
-    const publicId = url.split('/').slice(-2).join('/').split('.')[0];
-    await cloudinary.uploader.destroy(`location-management/${publicId}`);
+    // Extract public ID from Cloudinary URL
+    // URL format: https://res.cloudinary.com/{cloud_name}/image/upload/{folder}/{public_id}.{ext}
+    const urlParts = url.split('/');
+    const uploadIndex = urlParts.findIndex(part => part === 'upload');
+    if (uploadIndex !== -1 && uploadIndex < urlParts.length - 1) {
+      // Get everything after 'upload' and before the file extension
+      const pathAfterUpload = urlParts.slice(uploadIndex + 1).join('/');
+      const publicId = pathAfterUpload.split('.')[0];
+      await cloudinary.uploader.destroy(publicId);
+    } else {
+      // Fallback to old method
+      const publicId = url.split('/').slice(-2).join('/').split('.')[0];
+      await cloudinary.uploader.destroy(`location-management/${publicId}`);
+    }
   } catch (error) {
     console.error('Error deleting from Cloudinary:', error);
   }

@@ -15,21 +15,24 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Update settings (Admin only)
+// Update settings (Admin/Staff/Manager only)
 router.patch(
   '/',
   authenticate,
-  authorize(UserRole.ADMIN),
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
   async (req: AuthRequest, res) => {
     try {
-      const { defaultProvince } = req.body;
+      const { defaultProvince, defaultDistrict } = req.body;
       
       let settings = await Settings.findOne();
       if (!settings) {
-        settings = new Settings({ defaultProvince });
+        settings = new Settings({ defaultProvince, defaultDistrict });
       } else {
         if (defaultProvince !== undefined) {
           settings.defaultProvince = defaultProvince || undefined;
+        }
+        if (defaultDistrict !== undefined) {
+          settings.defaultDistrict = defaultDistrict || undefined;
         }
       }
       
