@@ -25,6 +25,9 @@ export interface ILocation extends Document {
     latitude?: number;
     longitude?: number;
     featured?: boolean;
+    websiteLink?: string;
+    businessHours?: string;
+    featuredProducts?: string;
     createdAt: Date;
     updatedAt: Date;
 }

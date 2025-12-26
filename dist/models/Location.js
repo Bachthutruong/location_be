@@ -89,6 +89,18 @@ const LocationSchema = new Schema({
         type: Boolean,
         default: false,
         index: true
+    },
+    websiteLink: {
+        type: String,
+        trim: true
+    },
+    businessHours: {
+        type: String,
+        trim: true
+    },
+    featuredProducts: {
+        type: String,
+        trim: true
     }
 }, {
     timestamps: true

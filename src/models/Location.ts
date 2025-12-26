@@ -27,6 +27,9 @@ export interface ILocation extends Document {
   latitude?: number;
   longitude?: number;
   featured?: boolean;
+  websiteLink?: string;
+  businessHours?: string;
+  featuredProducts?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,6 +118,18 @@ const LocationSchema = new Schema<ILocation>(
       type: Boolean,
       default: false,
       index: true
+    },
+    websiteLink: {
+      type: String,
+      trim: true
+    },
+    businessHours: {
+      type: String,
+      trim: true
+    },
+    featuredProducts: {
+      type: String,
+      trim: true
     }
   },
   {

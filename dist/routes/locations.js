@@ -317,7 +317,7 @@ router.get('/admin/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF,
 router.post('/', authenticate, authorize(UserRole.MANAGER, UserRole.ADMIN), upload.array('images', 10), async (req, res) => {
     try {
         // Manual validation for multipart/form-data
-        const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude } = req.body;
+        const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude, websiteLink, businessHours, featuredProducts } = req.body;
         if (!name || !name.trim()) {
             return res.status(400).json({ message: '地點名稱為必填' });
         }
@@ -374,7 +374,10 @@ router.post('/', authenticate, authorize(UserRole.MANAGER, UserRole.ADMIN), uplo
             manager: req.user.id,
             status,
             latitude: latitude ? parseFloat(latitude) : undefined,
-            longitude: longitude ? parseFloat(longitude) : undefined
+            longitude: longitude ? parseFloat(longitude) : undefined,
+            websiteLink: websiteLink ? websiteLink.trim() : undefined,
+            businessHours: businessHours ? businessHours.trim() : undefined,
+            featuredProducts: featuredProducts ? featuredProducts.trim() : undefined
         });
         // If admin creates, auto-approve
         if (isAdmin) {
@@ -410,7 +413,7 @@ router.put('/:id', authenticate, upload.array('images', 10), async (req, res) =>
         if (!isManager && !isStaff && !isAdmin) {
             return res.status(403).json({ message: 'Forbidden' });
         }
-        const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude } = req.body;
+        const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude, websiteLink, businessHours, featuredProducts } = req.body;
         if (name)
             location.name = name.trim();
         if (category)
@@ -433,6 +436,12 @@ router.put('/:id', authenticate, upload.array('images', 10), async (req, res) =>
             location.latitude = parseFloat(latitude);
         if (longitude)
             location.longitude = parseFloat(longitude);
+        if (websiteLink !== undefined)
+            location.websiteLink = websiteLink ? websiteLink.trim() : undefined;
+        if (businessHours !== undefined)
+            location.businessHours = businessHours ? businessHours.trim() : undefined;
+        if (featuredProducts !== undefined)
+            location.featuredProducts = featuredProducts ? featuredProducts.trim() : undefined;
         // Handle images with optional keepImages + uploads
         const files = req.files;
         // Parse keepImages (JSON array or comma-separated)

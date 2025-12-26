@@ -340,7 +340,7 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       // Manual validation for multipart/form-data
-      const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude } = req.body;
+      const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude, websiteLink, businessHours, featuredProducts } = req.body;
 
       if (!name || !name.trim()) {
         return res.status(400).json({ message: '地點名稱為必填' });
@@ -403,7 +403,10 @@ router.post(
         manager: req.user!.id,
         status,
         latitude: latitude ? parseFloat(latitude as string) : undefined,
-        longitude: longitude ? parseFloat(longitude as string) : undefined
+        longitude: longitude ? parseFloat(longitude as string) : undefined,
+        websiteLink: websiteLink ? websiteLink.trim() : undefined,
+        businessHours: businessHours ? businessHours.trim() : undefined,
+        featuredProducts: featuredProducts ? featuredProducts.trim() : undefined
       });
 
       // If admin creates, auto-approve
@@ -451,7 +454,7 @@ router.put(
         return res.status(403).json({ message: 'Forbidden' });
       }
 
-      const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude } = req.body;
+      const { name, category, province, district, street, address, phone, googleMapsLink, description, latitude, longitude, websiteLink, businessHours, featuredProducts } = req.body;
 
       if (name) location.name = name.trim();
       if (category) location.category = category;
@@ -464,6 +467,9 @@ router.put(
       if (description) location.description = description.trim();
       if (latitude) location.latitude = parseFloat(latitude as string);
       if (longitude) location.longitude = parseFloat(longitude as string);
+      if (websiteLink !== undefined) location.websiteLink = websiteLink ? websiteLink.trim() : undefined;
+      if (businessHours !== undefined) location.businessHours = businessHours ? businessHours.trim() : undefined;
+      if (featuredProducts !== undefined) location.featuredProducts = featuredProducts ? featuredProducts.trim() : undefined;
 
       // Handle images with optional keepImages + uploads
       const files = req.files as Express.Multer.File[];
