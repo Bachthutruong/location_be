@@ -2,7 +2,11 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMenu extends Document {
   name: string;
-  link: string;
+  link?: string; // Optional when menuType is 'filter'
+  menuType?: 'link' | 'filter'; // 'link' = regular link, 'filter' = filter menu
+  filterProvince?: string; // Province filter for filter menu type
+  filterDistrict?: string; // District filter for filter menu type
+  filterCategories?: mongoose.Types.ObjectId[]; // Category IDs for filter menu type
   parent?: mongoose.Types.ObjectId;
   order: number;
   isGlobal: boolean; // true for global menu (all users), false for user-specific
@@ -20,9 +24,26 @@ const MenuSchema = new Schema<IMenu>(
     },
     link: {
       type: String,
-      required: true,
+      required: false,
       trim: true
     },
+    menuType: {
+      type: String,
+      enum: ['link', 'filter'],
+      default: 'link'
+    },
+    filterProvince: {
+      type: String,
+      trim: true
+    },
+    filterDistrict: {
+      type: String,
+      trim: true
+    },
+    filterCategories: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Category'
+    }],
     parent: {
       type: Schema.Types.ObjectId,
       ref: 'Menu',

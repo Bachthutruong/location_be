@@ -30,6 +30,10 @@ const NewsSchema = new Schema({
     },
     publishedAt: {
         type: Date
+    },
+    isCourse: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

@@ -7,6 +7,7 @@ export interface INews extends Document {
     author: mongoose.Types.ObjectId;
     published: boolean;
     publishedAt?: Date;
+    isCourse?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }

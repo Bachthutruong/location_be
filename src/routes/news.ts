@@ -1,8 +1,9 @@
-import express, { Response, RequestHandler } from 'express';
+import express, { Response, Request, RequestHandler } from 'express';
 import mongoose from 'mongoose';
 import multer from 'multer';
 import { body, validationResult } from 'express-validator';
 import News from '../models/News.js';
+import CourseRegistration from '../models/CourseRegistration.js';
 import { authenticate, authorize, AuthRequest } from '../middleware/auth.js';
 import { UserRole } from '../models/User.js';
 import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js';
@@ -148,7 +149,7 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       // Manual validation for multipart/form-data
-      const { title, content, category, published } = req.body;
+      const { title, content, category, published, isCourse } = req.body;
 
       if (!title || !title.trim()) {
         return res.status(400).json({ message: '標題為必填' });
@@ -184,7 +185,8 @@ router.post(
         images: imageUrls,
         author: req.user!.id,
         published: isPublished,
-        publishedAt: isPublished ? new Date() : undefined
+        publishedAt: isPublished ? new Date() : undefined,
+        isCourse: isCourse === 'true' || isCourse === true
       });
 
       await news.save();
@@ -212,11 +214,14 @@ router.put(
         return res.status(404).json({ message: 'News not found' });
       }
 
-      const { title, content, category, published } = req.body;
+      const { title, content, category, published, isCourse } = req.body;
 
       if (title) news.title = title.trim();
       if (content) news.content = content.trim();
       if (category) news.category = category;
+      if (typeof isCourse !== 'undefined') {
+        news.isCourse = isCourse === 'true' || isCourse === true;
+      }
 
       // Handle published status
       if (typeof published !== 'undefined') {
@@ -291,6 +296,121 @@ router.delete(
       await news.deleteOne();
 
       res.json({ message: 'News deleted successfully' });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// Course Registration Routes
+
+// Register for a course (public)
+router.post(
+  '/:id/register',
+  [
+    body('name').trim().notEmpty().withMessage('姓名為必填'),
+    body('email').isEmail().withMessage('Email 格式不正確'),
+    body('phone').trim().notEmpty().withMessage('電話為必填'),
+    body('note').optional().trim()
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const news = await News.findById(req.params.id);
+      if (!news) {
+        return res.status(404).json({ message: '課程不存在' });
+      }
+
+      if (!news.isCourse) {
+        return res.status(400).json({ message: '此文章不是課程' });
+      }
+
+      if (!news.published) {
+        return res.status(400).json({ message: '課程尚未發布' });
+      }
+
+      const { name, email, phone, note } = req.body;
+
+      const registration = new CourseRegistration({
+        news: news._id,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: phone.trim(),
+        note: note ? note.trim() : ''
+      });
+
+      await registration.save();
+      await registration.populate('news', 'title');
+
+      res.status(201).json({
+        message: '報名課程成功',
+        registration
+      });
+    } catch (error: any) {
+      console.error('Error registering for course:', error);
+      res.status(500).json({ message: error.message || '報名課程失敗' });
+    }
+  }
+);
+
+// Get course registrations for a news (Admin/Staff/Manager only)
+router.get(
+  '/:id/registrations',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const news = await News.findById(req.params.id);
+      if (!news) {
+        return res.status(404).json({ message: 'News not found' });
+      }
+
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const offset = req.query.offset ? parseInt(req.query.offset as string, 10) : 0;
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+      const actualOffset = offset || (page - 1) * limit;
+
+      const [registrations, total] = await Promise.all([
+        CourseRegistration.find({ news: req.params.id })
+          .sort({ createdAt: -1 })
+          .skip(actualOffset)
+          .limit(limit),
+        CourseRegistration.countDocuments({ news: req.params.id })
+      ]);
+
+      res.json({
+        items: registrations,
+        total,
+        offset: actualOffset,
+        limit,
+        page,
+        totalPages: Math.ceil(total / limit)
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+);
+
+// Get single course registration (Admin/Staff/Manager only)
+router.get(
+  '/registrations/:registrationId',
+  authenticate,
+  authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const registration = await CourseRegistration.findById(req.params.registrationId)
+        .populate('news', 'title isCourse');
+
+      if (!registration) {
+        return res.status(404).json({ message: 'Registration not found' });
+      }
+
+      res.json(registration);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

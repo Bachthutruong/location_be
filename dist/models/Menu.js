@@ -7,9 +7,26 @@ const MenuSchema = new Schema({
     },
     link: {
         type: String,
-        required: true,
+        required: false,
         trim: true
     },
+    menuType: {
+        type: String,
+        enum: ['link', 'filter'],
+        default: 'link'
+    },
+    filterProvince: {
+        type: String,
+        trim: true
+    },
+    filterDistrict: {
+        type: String,
+        trim: true
+    },
+    filterCategories: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Category'
+        }],
     parent: {
         type: Schema.Types.ObjectId,
         ref: 'Menu',

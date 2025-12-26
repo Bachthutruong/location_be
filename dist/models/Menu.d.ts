@@ -1,7 +1,11 @@
 import mongoose, { Document } from 'mongoose';
 export interface IMenu extends Document {
     name: string;
-    link: string;
+    link?: string;
+    menuType?: 'link' | 'filter';
+    filterProvince?: string;
+    filterDistrict?: string;
+    filterCategories?: mongoose.Types.ObjectId[];
     parent?: mongoose.Types.ObjectId;
     order: number;
     isGlobal: boolean;

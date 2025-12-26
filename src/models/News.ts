@@ -8,6 +8,7 @@ export interface INews extends Document {
   author: mongoose.Types.ObjectId;
   published: boolean;
   publishedAt?: Date;
+  isCourse?: boolean; // Flag to indicate if this news is a course
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,6 +45,10 @@ const NewsSchema = new Schema<INews>(
     },
     publishedAt: {
       type: Date
+    },
+    isCourse: {
+      type: Boolean,
+      default: false
     }
   },
   {

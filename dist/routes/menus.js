@@ -157,7 +157,12 @@ router.get('/:id', async (req, res) => {
 // Create menu (Admin/Staff/Manager only)
 router.post('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), [
     body('name').trim().notEmpty().withMessage('Menu name is required'),
-    body('link').trim().notEmpty().withMessage('Menu link is required'),
+    body('link').optional().trim(),
+    body('menuType').optional().isIn(['link', 'filter']).withMessage('Menu type must be either "link" or "filter"'),
+    body('filterProvince').optional().trim(),
+    body('filterDistrict').optional().trim(),
+    body('filterCategories').optional().isArray().withMessage('Filter categories must be an array'),
+    body('filterCategories.*').optional().isMongoId().withMessage('Invalid category ID'),
     body('parent').optional().custom((value) => {
         if (value === null || value === '' || value === undefined) {
             return true;
@@ -171,7 +176,19 @@ router.post('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRol
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
-        const { name, link, parent, order, isGlobal, userId } = req.body;
+        const { name, link, menuType, filterProvince, filterDistrict, filterCategories, parent, order, isGlobal, userId } = req.body;
+        // Validate menu type and required fields
+        const finalMenuType = menuType || 'link';
+        if (finalMenuType === 'link' && !link) {
+            return res.status(400).json({ message: 'Link is required for link menu type' });
+        }
+        if (finalMenuType === 'filter') {
+            // For filter menu, link is optional (will default to / with query params)
+            // But we need at least one filter
+            if (!filterProvince && !filterDistrict && (!filterCategories || filterCategories.length === 0)) {
+                return res.status(400).json({ message: 'At least one filter (province, district, or category) is required for filter menu type' });
+            }
+        }
         // Validate parent if provided
         let parentId = null;
         if (parent && parent !== '' && parent !== null) {
@@ -195,9 +212,15 @@ router.post('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRol
             }
             userIdObj = userId;
         }
+        // For filter menu type, set link to / if not provided
+        const finalLink = finalMenuType === 'filter' && !link ? '/' : link;
         const menu = new Menu({
             name,
-            link,
+            link: finalLink,
+            menuType: finalMenuType,
+            filterProvince: filterProvince || undefined,
+            filterDistrict: filterDistrict || undefined,
+            filterCategories: filterCategories && filterCategories.length > 0 ? filterCategories : undefined,
             parent: parentId,
             order: order || 0,
             isGlobal: isGlobal !== undefined ? isGlobal : true,
@@ -214,7 +237,12 @@ router.post('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRol
 // Update menu (Admin only)
 router.put('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), [
     body('name').optional().trim().notEmpty(),
-    body('link').optional().trim().notEmpty(),
+    body('link').optional().trim(),
+    body('menuType').optional().isIn(['link', 'filter']).withMessage('Menu type must be either "link" or "filter"'),
+    body('filterProvince').optional().trim(),
+    body('filterDistrict').optional().trim(),
+    body('filterCategories').optional().isArray().withMessage('Filter categories must be an array'),
+    body('filterCategories.*').optional().isMongoId().withMessage('Invalid category ID'),
     body('parent').optional().custom((value) => {
         if (value === null || value === '' || value === undefined) {
             return true;
@@ -232,12 +260,35 @@ router.put('/:id', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserR
         if (!menu) {
             return res.status(404).json({ message: 'Menu not found' });
         }
-        const { name, link, parent, order } = req.body;
+        const { name, link, menuType, filterProvince, filterDistrict, filterCategories, parent, order } = req.body;
         if (name !== undefined) {
             menu.name = name;
         }
-        if (link !== undefined) {
+        // Handle menu type and related fields
+        if (menuType !== undefined) {
+            menu.menuType = menuType;
+            // If changing to filter type and no link provided, set to /
+            if (menuType === 'filter' && !link) {
+                menu.link = '/';
+            }
+            else if (menuType === 'link' && link !== undefined) {
+                menu.link = link;
+            }
+        }
+        if (link !== undefined && menu.menuType !== 'filter') {
             menu.link = link;
+        }
+        else if (menu.menuType === 'filter' && !link) {
+            menu.link = '/';
+        }
+        if (filterProvince !== undefined) {
+            menu.filterProvince = filterProvince || undefined;
+        }
+        if (filterDistrict !== undefined) {
+            menu.filterDistrict = filterDistrict || undefined;
+        }
+        if (filterCategories !== undefined) {
+            menu.filterCategories = filterCategories && filterCategories.length > 0 ? filterCategories : undefined;
         }
         if (order !== undefined) {
             menu.order = order;
