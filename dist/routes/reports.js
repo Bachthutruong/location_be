@@ -9,17 +9,32 @@ const router = express.Router();
 router.get('/', authenticate, authorize(UserRole.ADMIN, UserRole.STAFF, UserRole.MANAGER), async (req, res) => {
     try {
         const { status } = req.query;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
         const query = {};
         if (status) {
             query.status = status;
         }
-        const reports = await Report.find(query)
-            .populate('location', 'name address')
-            .populate('category', 'name')
-            .populate('reportedBy', 'name email')
-            .populate('resolvedBy', 'name email')
-            .sort({ createdAt: -1 });
-        res.json(reports);
+        const [reports, total] = await Promise.all([
+            Report.find(query)
+                .populate('location', 'name address')
+                .populate('category', 'name')
+                .populate('reportedBy', 'name email')
+                .populate('resolvedBy', 'name email')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit),
+            Report.countDocuments(query)
+        ]);
+        const totalPages = Math.ceil(total / limit);
+        res.json({
+            reports,
+            total,
+            page,
+            totalPages,
+            limit
+        });
     }
     catch (error) {
         res.status(500).json({ message: error.message });
